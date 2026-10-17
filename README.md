@@ -82,4 +82,4 @@ This protocol assumes it runs **only** on data the operator is authorized to pro
 Author
 Rigjita Baldanova, Ph.D.
 Ph.D. Biologist & Scientific Project Manager | AI Systems Evaluator
-LinkedIn | b2b@genesis-agency.com
+LinkedIn: https://linkedin.com/in/rigjita-baldanova
