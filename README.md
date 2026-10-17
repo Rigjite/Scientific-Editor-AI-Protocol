@@ -58,6 +58,27 @@ You are a Senior Scientific Auditor and Lead Editor specializing in Microbiology
 3. Proven Impact in Research & Clinical Operations
  * Faster Documentation Turnaround: Deployed during antibacterial drug discovery research (Rutgers University) to streamline data synthesis and NIH-NCATS collaborator reporting.
  * Cross-Functional Clinical Alignment: Applied principles derived from managing 150+ clinical diagnostic assay launches and 200+ physician/biotech accounts in CLIA/CAP-regulated reference laboratories.
+## 4. Data Governance for Clinical & Regulated Inputs
+
+This protocol assumes it runs **only** on data the operator is authorized to process. Before any document enters the pipeline:
+
+- **De-identification first.** No protected health information (PHI), patient identifiers, or site-identifying details enter the model context. De-identify per HIPAA Safe Harbor / Expert Determination (or the applicable local regime) *before* Stage 1.
+- **No training on inputs.** Use enterprise / zero-retention API instances only — endpoints contractually excluded from model training. Consumer chatbots are not acceptable for regulated or unpublished material.
+- **Unpublished data & IP.** Manuscripts, ELN/LIMS extracts, and assay validation data are processed only with the data owner's written authorization; employer and collaborator agreements govern what may leave the institutional boundary.
+- **Audit trail.** Every run logs: source document hash, model ID and version, the prompt template version, and the [DATA_REQUIRED] / [UNVERIFIED CLAIM] flags raised. The log — not the chat history — is the record of what was checked.
+
+## 5. Worked Example (illustrative excerpt)
+
+*The passage below is a synthetic illustration of the audit format, not a real document.*
+
+**Input (Methods excerpt, flawed):**
+> "MICs were determined by broth microdilution. Briefly, bacteria were grown overnight and diluted to an appropriate density. Compound X was tested at various concentrations and growth inhibition was measured at OD600."
+
+**Audit output:**
+- **Score: 4/10.** Critical red flags: no medium specified (CAMHB required per CLSI M07); "appropriate density" is not a specification — final inoculum must be ~5×10⁵ CFU/mL per well; endpoint defined as OD600 reduction instead of absence of visible growth; no controls mentioned.
+- **[UNVERIFIED CLAIM: Requires Source Data]** — "various concentrations" (exact range not stated); "measured at OD600" (no wavelength/time given).
+- **Polished rewrite:** "MICs were determined by broth microdilution per CLSI M07. E. coli ATCC 25922 was grown overnight on non-selective agar; colonies were suspended to 0.5 McFarland (~1.5×10⁸ CFU/mL) and diluted 1:100 in cation-adjusted Mueller-Hinton broth (CAMHB). Compound X was serially diluted 2-fold in CAMHB (final range [DATA_REQUIRED] µg/mL); wells were inoculated to a final density of ~5×10⁵ CFU/mL, incubated at 35 ± 2 °C for 16–20 h, and read as the lowest concentration with no visible growth. Sterility (medium-only) and growth (compound-free) controls were included on each plate."
+
 Author
 Rigjita Baldanova, Ph.D.
 Ph.D. Biologist & Scientific Project Manager | AI Systems Evaluator
