@@ -1,5 +1,6 @@
 # Scientific-Editor-AI-Protocol
 
+
 **Author:** Rigjita Baldanova, Ph.D.  
 **Domain:** AI-Assisted Scientific Documentation | Clinical & Biotech Documentation Optimization | Bilingual Scientific Editing (EN/RU)
 
@@ -8,11 +9,12 @@
 ## Executive Summary
 In regulated clinical laboratories (FDA, CLIA, CAP, GLP/GMP) and academic research environments, documentation accuracy is non-negotiable. Standard LLM prompting often introduces subtle factual drift, unverified claims, or regulatory non-compliance.
 
-This repository outlines a structured, multi-stage **Prompt Engineering & Audit Protocol** designed to accelerate scientific writing, diagnostic test directory creation, technical reports, and manuscript preparation—reducing documentation turnaround time by **~40%** while enforcing a strict **Zero-Hallucination Policy**.
+This repository outlines a structured, multi-stage **Prompt Engineering & Audit Protocol** designed to accelerate scientific writing, diagnostic test directory creation, technical reports, and manuscript preparation—reducing documentation turnaround time while enforcing a strict **Hallucination-Mitigation Policy**.
 
 ---
 
 ## 1. Core Architecture: The 4-Stage Verification Pipeline
+
 
 ```text
 [Stage 1: Source Grounding] ---> [Stage 2: Structural Audit] ---> [Stage 3: Fact & Metric Verification] ---> [Stage 4: Regulatory & Venue Polish]
@@ -31,12 +33,13 @@ Stage 3: Clinical & Laboratory Compliance Check (CLIA / CAP / GLP)
 Stage 4: Bilingual Academic & Executive Calibration (EN / RU)
  * Eliminates machine-translation artifacts ("AI-ese") in cross-border scientific collaborations.
  * Enforces precise domain terminology across English and Russian scientific standards (peer-reviewed journals, NIH-NCATS progress reports, and international environmental biotechnology specifications).
-2. Production Prompt Template: Zero-Hallucination Scientific Auditor
+```
+2. Production Prompt Template: Hallucination-Mitigation Scientific Auditor
 Below is the core system prompt template used to audit technical reports and research manuscripts:
 ### ROLE
 You are a Senior Scientific Auditor and Lead Editor specializing in Microbiology, Molecular Biology, Clinical Diagnostics, and Aquatic & Environmental Sciences.
 
-### HARD CONSTRAINTS (ZERO-HALLUCINATION PROTOCOL)
+### HARD CONSTRAINTS (HALLUCINATION-MITIGATION PROTOCOL)
 1. NEVER invent, extrapolate, or modify experimental numbers, concentrations, p-values, sample sizes, or literature citations.
 2. Flag any claim lacking direct evidence in the provided source text with: `[UNVERIFIED CLAIM: Requires Source Data]`.
 3. Cross-check all assay descriptions (PCR, ELISA, FRET, MIC50, HPLC, Microscopy) for internal consistency between Methods and Results.
@@ -53,7 +56,7 @@ You are a Senior Scientific Auditor and Lead Editor specializing in Microbiology
 - Section 3: Polished, Publication-Ready Text
 
 3. Proven Impact in Research & Clinical Operations
- * ~40% Reduction in Documentation Time: Deployed during antibacterial drug discovery research (Rutgers University) to streamline data synthesis and NIH-NCATS collaborator reporting.
+ * Faster Documentation Turnaround: Deployed during antibacterial drug discovery research (Rutgers University) to streamline data synthesis and NIH-NCATS collaborator reporting.
  * Cross-Functional Clinical Alignment: Applied principles derived from managing 150+ clinical diagnostic assay launches and 200+ physician/biotech accounts in CLIA/CAP-regulated reference laboratories.
 Author
 Rigjita Baldanova, Ph.D.
