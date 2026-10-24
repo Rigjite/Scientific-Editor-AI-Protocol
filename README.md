@@ -1,7 +1,7 @@
 # Scientific Editor — AI Protocol
 
 [![tests](https://github.com/Rigjite/Scientific-Editor-AI-Protocol/actions/workflows/tests.yml/badge.svg)](https://github.com/Rigjite/Scientific-Editor-AI-Protocol/actions/workflows/tests.yml)
-![version 4.8](https://img.shields.io/badge/version-4.8-blue)
+![version 4.9](https://img.shields.io/badge/version-4.9-blue)
 [![Agent Skill](https://img.shields.io/badge/Agent_Skill-agentskills.io-6f42c1)](https://agentskills.io)
 ![Python 3.9+, standard library only](https://img.shields.io/badge/python-3.9%2B_stdlib_only-3776AB)
 [![License: CC BY 4.0](https://img.shields.io/badge/license-CC_BY_4.0-lightgrey)](LICENSE)
@@ -24,6 +24,14 @@ Seven rubric dimensions (1–5, anchored) are calibrated to the venue: a РИН�
 
 **Modes:** `audit-only` (default — a report, no changes to the text), `edit`, `pre-submission`, and `review-edits` — judging changes that another model or a co-author made to a base version.
 
+**Voice pass (v4.9).** Academic text written with AI help often reads as machine-made: no author in it, three thoughts glued into one sentence with semicolons and dashes, chains of nouns where a verb would do, and conclusions that repeat the abstract. The voice pass rewrites toward classic academic style — the author shows the reader what the author has seen, precisely and in proportion to the evidence — and checks afterwards that no number or citation changed. It is about clear human prose, not about hiding AI use: AI assistance stays disclosed.
+
+*Synthetic example:*
+
+> **Before.** Экономический эффект складывается из отказа от мер с кратковременным эффектом, превращения затрат на вывоз ила в ресурс для земледелия и сопоставления стоимости мер с предотвращённым ущербом.
+>
+> **After.** Главную экономию даёт отказ от мер, которые помогают ненадолго, — ещё до того, как они оплачены. Ил, который иначе пришлось бы вывозить, может стать удобрением для полей. Стоимость каждой меры мы сравниваем с ущербом, который она предотвращает.
+
 ## Install
 
 The skill folder must be named `scientific-editor` — the `name` in `SKILL.md` — whatever this repository is called.
@@ -38,6 +46,7 @@ Ask in plain language, for example:
 
 - «Проверь статью по scientific-editor: конференция РИНЦ, режим audit-only, лимит 8 страниц. Оцени по 10-балльной шкале.»
 - «Разбери правку: база — v9.docx, правка соавтора — v9.1.docx. Запрещено возвращать: коммерческие цифры, названия объектов X и Y.»
+- «Убери машинный стиль: режим edit, проход «голос», факты не трогать; покажи три пары «было → стало».»
 - "Audit this manuscript for a Q2 journal, pre-submission mode; sources are uploaded."
 
 The report follows [`assets/report_template.md`](assets/report_template.md): intake card, summary with gate verdicts, claim–evidence matrix, disclosure checklist, rubric, formatting, open items, and — in review-edits mode — a per-change decision table.
@@ -49,8 +58,11 @@ The report follows [`assets/report_template.md`](assets/report_template.md): int
 # Russian decimal commas, number–unit spacing, «…» quotes; also prints the length
 python3 mse_lint.py manuscript.docx          # .docx, .md or .txt; --json for machine output
 
-# review-edits: changed sentences, NEW NUMBER / NEW CITATION / FORBIDDEN flags, length change
+# review-edits: changed sentences, NEW NUMBER / NEW CITATION / FORBIDDEN / MISSING NUMBER flags, length change
 python3 mse_diff.py base.docx edited.docx --forbid "term1,term2"
+
+# voice: author's "we", sentence rhythm, glued clauses, noun chains, stock phrases, abstract-conclusions repetition
+python3 mse_style.py manuscript.docx --reference my_own_paper_2003.docx
 
 # unit tests (synthetic fixtures; also run by GitHub Actions on every push)
 python3 tests/test_tools.py
@@ -135,7 +147,7 @@ This protocol assumes it runs **only** on data the operator is authorized to pro
 
 Use GitHub's **Cite this repository** button (from [`CITATION.cff`](CITATION.cff)), or:
 
-Baldanova, R. (2026). *Scientific Editor — AI Protocol* (Agent Skill, v4.8).\
+Baldanova, R. (2026). *Scientific Editor — AI Protocol* (Agent Skill, v4.9).\
 <https://github.com/Rigjite/Scientific-Editor-AI-Protocol>
 
 ## License

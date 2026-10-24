@@ -17,6 +17,7 @@ sys.path.insert(0, ROOT)
 
 import mse_diff  # noqa: E402
 import mse_lint  # noqa: E402
+import mse_style  # noqa: E402
 
 CLEAN = """УДК 504.455.054:004.942:574.5
 ПРИМЕР СТАТЬИ
@@ -138,6 +139,13 @@ class DiffTests(unittest.TestCase):
         changes, _, _ = mse_diff.diff(BASE[:1], EDITED[:1])
         self.assertTrue(all(not c["new_numbers"] for c in changes))
 
+    def test_missing_numbers_flagged(self):
+        edited = ["Озеро сильно загрязнено [1]. Данные получены в 2023 г.", BASE[1]]
+        _, _, stats = mse_diff.diff(BASE, edited)
+        self.assertEqual(stats["missing_numbers"], ["1", "2.4", "2.5"])
+        _, _, same = mse_diff.diff(BASE, BASE)
+        self.assertEqual(same["missing_numbers"], [])
+
     def test_forbidden_terms(self):
         _, forbidden, _ = mse_diff.diff(BASE, EDITED, forbid=["LKR", "Котокель"])
         self.assertEqual([f["term"] for f in forbidden], ["LKR"])
@@ -157,6 +165,70 @@ class DiffTests(unittest.TestCase):
                 self.assertEqual(mse_diff.main(["mse_diff.py", a, a]), 0)
                 self.assertEqual(mse_diff.main(["mse_diff.py", a, b]), 1)
                 self.assertEqual(mse_diff.main(["mse_diff.py", a, os.path.join(d, "x.txt")]), 2)
+
+
+ROBOTIC = """Аннотация. Цель работы – обоснование применения цифровых двойников для предварительной оценки хозяйственных решений и снижения ущерба окружающей среде.
+Ключевые слова: цифровой двойник; оценка
+Введение
+Данная работа является обобщением опыта применения цифровых двойников; рассмотрение проводится в рамках концепции устойчивого развития; осуществление мониторинга является условием управления. Таким образом, внедрение двойников обеспечивает снижение затрат (на мониторинг и обследование) и повышение точности (прогнозирования и планирования) – это важно отметить для обоснования решений.
+Рисунок 1 – Схема применения цифрового двойника для оценки хозяйственных решений и снижения ущерба окружающей среде в условиях неопределённости
+Выводы
+Цель работы – обоснование применения цифровых двойников для предварительной оценки хозяйственных решений и снижения ущерба окружающей среде достигнута; применение рекомендуется.
+Конфликт интересов. Авторы заявляют об отсутствии конфликта интересов, который является формальным требованием издания и не влияет на выводы.
+"""
+
+HUMAN = """Введение
+Мы начали с простого вопроса: что увидит городской водоём через десять лет, если ничего не делать? Ответ оказался неприятным. Фосфора в воде так много, что даже хороший ветланд не выведет озеро из худшего класса. Поэтому мы сравнили три пути, а не один. Каждый путь мы проверили на тех же исходных данных и с теми же порогами, чтобы сравнение было честным. Расчистка дна быстро улучшает воду, но стоки снова приносят грязь, и через несколько лет всё возвращается. Перехват стоков работает медленно, зато результат держится годами. Мы считаем, что городу нужны обе меры сразу, и показываем, во что это обойдётся.
+"""
+
+
+class StyleTests(unittest.TestCase):
+    def test_robotic_text_is_flagged(self):
+        p = mse_style.profile(ROBOTIC.splitlines())
+        checks = {c for c, _ in mse_style.flags(p)}
+        self.assertTrue({"glue", "nouns", "stock", "repeat"} <= checks, checks)
+        self.assertEqual(p["author_voice"], 0)
+
+    def test_human_text_is_clean(self):
+        p = mse_style.profile(HUMAN.splitlines())
+        self.assertEqual(mse_style.flags(p), [], p)
+        self.assertGreaterEqual(p["author_voice"], 4)
+
+    def test_voice_flag_needs_enough_text(self):
+        p = mse_style.profile(ROBOTIC.splitlines())
+        self.assertNotIn("voice", {c for c, _ in mse_style.flags(p)})  # too short to judge
+        long_text = ROBOTIC.replace("Введение\n", "Введение\n" + ("Данная работа является обзором методов оценки. " * 60) + "\n")
+        p2 = mse_style.profile(long_text.splitlines())
+        self.assertIn("voice", {c for c, _ in mse_style.flags(p2)})
+
+    def test_captions_and_back_matter_are_skipped(self):
+        p = mse_style.profile(ROBOTIC.splitlines())
+        self.assertFalse(any(s.startswith("Рисунок") for s in p["long_sentences"]))
+        self.assertNotIn("конфликт", " ".join(p["shared_5grams_abstract_conclusions"]))
+
+    def test_english_stock_words(self):
+        text = ("Introduction\nThis study delves into lake restoration and underscores the crucial role of "
+                "wetlands; notably, it offers comprehensive insights into the intricate landscape of nutrients.")
+        p = mse_style.profile(text.splitlines())
+        self.assertEqual(p["language"], "en")
+        self.assertGreaterEqual(len(p["stock_phrases"]), 6)
+
+    def test_cli_with_reference(self):
+        with tempfile.TemporaryDirectory() as d:
+            a, b = os.path.join(d, "a.md"), os.path.join(d, "b.md")
+            with open(a, "w", encoding="utf-8") as f:
+                f.write(ROBOTIC)
+            with open(b, "w", encoding="utf-8") as f:
+                f.write(HUMAN)
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                code = mse_style.main(["mse_style.py", a, "--reference", b, "--json"])
+            self.assertEqual(code, 1)
+            data = __import__("json").loads(buf.getvalue())
+            self.assertGreater(data["references"][0]["author_voice"], 0)
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(mse_style.main(["mse_style.py", b]), 0)
+                self.assertEqual(mse_style.main(["mse_style.py", os.path.join(d, "none.md")]), 2)
 
 
 if __name__ == "__main__":

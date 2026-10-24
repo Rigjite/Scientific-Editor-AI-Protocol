@@ -9,12 +9,14 @@ editor must not let through unchecked:
                    (it needs a source before it can be accepted);
   * NEW CITATION — a [N] marker the base version never had;
   * FORBIDDEN    — a term the author excluded (--forbid "term1,term2"),
-                   reported wherever it occurs in the edited version.
+                   reported wherever it occurs in the edited version;
+  * MISSING NUMBER — a number the base version had and the edited one lost
+                   (a style edit must not drop a fact; in review-edits it shows deletions).
 It also reports the change in length, which matters for page limits.
 
 Usage:
   python3 mse_diff.py base.docx edited.docx [--forbid "term1,term2"] [--json]
-Exit 0 = no flags, 1 = flags found (new numbers, new citations or forbidden terms),
+Exit 0 = no flags, 1 = flags found (new or missing numbers, new citations, forbidden terms),
 2 = a file could not be read.
 The tool only lists changes; accepting or rejecting each one is the editor's call.
 """
@@ -90,7 +92,8 @@ def diff(base_lines, new_lines, forbid=()):
             forbidden.append({"term": term, "count": len(hits), "example": hits[0][:160]})
     words_base, words_new = len(base_text.split()), len(new_text.split())
     stats = {"words_base": words_base, "words_edited": words_new,
-             "change_percent": round(100.0 * (words_new - words_base) / max(words_base, 1), 1)}
+             "change_percent": round(100.0 * (words_new - words_base) / max(words_base, 1), 1),
+             "missing_numbers": sorted(base_nums - numbers(new_text), key=lambda x: (len(x), x))}
     return changes, forbidden, stats
 
 
@@ -115,13 +118,16 @@ def main(argv):
         print(f"cannot read input: {exc}")
         return 2
     changes, forbidden, stats = diff(base, new, forbid)
-    flagged = any(c["new_numbers"] or c["new_citations"] for c in changes) or bool(forbidden)
+    flagged = (any(c["new_numbers"] or c["new_citations"] for c in changes) or bool(forbidden)
+               or bool(stats["missing_numbers"]))
     if "--json" in argv:
         print(json.dumps({"changes": changes, "forbidden": forbidden, "stats": stats,
                           "result": "flags" if flagged else "no flags"}, ensure_ascii=False, indent=2))
         return 1 if flagged else 0
     print(f"{len(changes)} change(s); length {stats['words_base']} → {stats['words_edited']} words "
           f"({stats['change_percent']:+} %)")
+    if stats["missing_numbers"]:
+        print("MISSING NUMBER (in base, not in edited): " + ", ".join(stats["missing_numbers"]))
     for term in forbidden:
         print(f"FORBIDDEN '{term['term']}' ×{term['count']}: {_short(term['example'])}")
     print("\n| # | Type | Before | After | Flags | Decision |\n|---|---|---|---|---|---|")
