@@ -155,7 +155,8 @@ This protocol assumes it runs **only** on data the operator is authorized to pro
 Use GitHub's **Cite this repository** button (from [`CITATION.cff`](CITATION.cff)), or:
 
 Baldanova, R. (2026). *Scientific Editor — AI Protocol* (Agent Skill, v5.0).\
-<https://github.com/Rigjite/Scientific-Editor-AI-Protocol>
+<https://github.com/Rigjite/Scientific-Editor-AI-Protocol>\
+DOI: [10.5281/zenodo.23627929](https://doi.org/10.5281/zenodo.23627929)
 
 ## License
 
