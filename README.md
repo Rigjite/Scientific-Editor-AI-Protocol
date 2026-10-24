@@ -1,52 +1,101 @@
-# Scientific-Editor-AI-Protocol
+# Scientific Editor — AI Protocol
 
+[![tests](https://github.com/Rigjite/Scientific-Editor-AI-Protocol/actions/workflows/tests.yml/badge.svg)](https://github.com/Rigjite/Scientific-Editor-AI-Protocol/actions/workflows/tests.yml)
+![version 4.8](https://img.shields.io/badge/version-4.8-blue)
+[![Agent Skill](https://img.shields.io/badge/Agent_Skill-agentskills.io-6f42c1)](https://agentskills.io)
+![Python 3.9+, standard library only](https://img.shields.io/badge/python-3.9%2B_stdlib_only-3776AB)
+[![License: CC BY 4.0](https://img.shields.io/badge/license-CC_BY_4.0-lightgrey)](LICENSE)
 
-**Author:** Rigjita Baldanova, Ph.D.  
-**Domain:** AI-Assisted Scientific Documentation | Clinical & Biotech Documentation Optimization | Bilingual Scientific Editing (EN/RU)
+**Author:** Rigjita Baldanova, Ph.D. ([ORCID 0009-0009-7891-7007](https://orcid.org/0009-0009-7891-7007))\
+**Domain:** AI-assisted scientific editing and pre-submission audit | Bilingual (EN/RU) | Clinical & biotech documentation
 
----
+An Agent Skill that edits and audits scientific manuscripts in Russian and English — journal articles (Scopus, WoS, ВАК), conference volumes, theses — without inventing data. It checks every claim against its source and the source against reality, runs four gates, scores the text against the bar of the target venue, and returns a structured report with an editorial recommendation. The full instructions are in [`SKILL.md`](SKILL.md).
 
-## Executive Summary
-In regulated clinical laboratories (FDA, CLIA, CAP, GLP/GMP) and academic research environments, documentation accuracy is non-negotiable. Standard LLM prompting often introduces subtle factual drift, unverified claims, or regulatory non-compliance.
+## What it checks
 
-This repository outlines a structured, multi-stage **Prompt Engineering & Audit Protocol** designed to accelerate scientific writing, diagnostic test directory creation, technical reports, and manuscript preparation—reducing documentation turnaround time while enforcing a strict **Hallucination-Mitigation Policy**.
+| Gate | Question | Verdicts |
+|---|---|---|
+| A. Sources | Does every cited source exist and support its claim? | PASS / FLAG / FAIL |
+| B. Internal facts | Are the math, units, physics and cross-references consistent? | PASS / FLAG / FAIL |
+| C. Provenance & COI | Do quantitative claims rest on the authors' own company data without independent validation or proper disclosure? Is AI use disclosed with the tools named? | PASS / FLAG / trigger |
+| D. Falsifiability | Is speculation presented as a conclusion? | PASS / FLAG / FAIL |
 
----
+Seven rubric dimensions (1–5, anchored) are calibrated to the venue: a РИНЦ conference volume, a ВАК thesis, a Q2 or a Q1 journal. On request the overall score is also given out of 10 (mean × 2), always next to the seven dimension scores.
 
-## 1. Core Architecture: The 4-Stage Verification Pipeline
+**Modes:** `audit-only` (default — a report, no changes to the text), `edit`, `pre-submission`, and `review-edits` — judging changes that another model or a co-author made to a base version.
 
+## Install
+
+The skill folder must be named `scientific-editor` — the `name` in `SKILL.md` — whatever this repository is called.
+
+- **Claude Code:** `git clone https://github.com/Rigjite/Scientific-Editor-AI-Protocol ~/.claude/skills/scientific-editor`
+- **Claude app (claude.ai, desktop, mobile):** download the zip from the latest release (the folder inside is named correctly), or zip the folder yourself so that `scientific-editor/SKILL.md` sits at the top of the archive, and upload it as a custom skill in the app's skills settings. If you used v4.7 (`my-scientific-editor-v4-7`), replace it with this one.
+- **Other Agent Skills clients:** copy the folder into the client's skills directory.
+
+## Quick start
+
+Ask in plain language, for example:
+
+- «Проверь статью по scientific-editor: конференция РИНЦ, режим audit-only, лимит 8 страниц. Оцени по 10-балльной шкале.»
+- «Разбери правку: база — v9.docx, правка соавтора — v9.1.docx. Запрещено возвращать: коммерческие цифры, названия объектов X и Y.»
+- "Audit this manuscript for a Q2 journal, pre-submission mode; sources are uploaded."
+
+The report follows [`assets/report_template.md`](assets/report_template.md): intake card, summary with gate verdicts, claim–evidence matrix, disclosure checklist, rubric, formatting, open items, and — in review-edits mode — a per-change decision table.
+
+## Tools (Python 3.9+, standard library only)
+
+```bash
+# formatting: citation order and gaps, reference list (GOST "1. …" or "[1] …"),
+# Russian decimal commas, number–unit spacing, «…» quotes; also prints the length
+python3 mse_lint.py manuscript.docx          # .docx, .md or .txt; --json for machine output
+
+# review-edits: changed sentences, NEW NUMBER / NEW CITATION / FORBIDDEN flags, length change
+python3 mse_diff.py base.docx edited.docx --forbid "term1,term2"
+
+# unit tests (synthetic fixtures; also run by GitHub Actions on every push)
+python3 tests/test_tools.py
+```
+
+The linter skips what is not Russian body text — the reference list, English lines, the УДК line, dates, version and licence numbers, DOIs, URLs — so a clean manuscript comes back clean. It checks formatting only; a clean run never replaces Gates A–D.
+
+## Validation and limits
+
+The gates were piloted once, on a real co-authored conference manuscript (not identified, to protect the co-authors): Gates B, C and D fired as designed, and the scores agreed with two independent frontier-model reviews — a calibration signal, not proof of accuracy. n = 1, one domain, not replicated. The skill structures an audit; it does not replace the auditor's domain competence. Details: section 3 of [`SKILL.md`](SKILL.md).
+
+## Origins: the clinical documentation protocol
+
+The skill grew out of a structured, multi-stage prompt-engineering and audit protocol for regulated documentation. In regulated clinical laboratories (FDA, CLIA, CAP, GLP/GMP) and academic research, documentation accuracy is non-negotiable; standard LLM prompting often introduces subtle factual drift, unverified claims, or regulatory non-compliance. The protocol accelerates scientific writing, diagnostic test directory creation, technical reports, and manuscript preparation while enforcing a strict hallucination-mitigation policy.
+
+### The 4-stage verification pipeline
 
 ```text
-[Stage 1: Source Grounding] ---> [Stage 2: Structural Audit] ---> [Stage 3: Fact & Metric Verification] ---> [Stage 4: Regulatory & Venue Polish]
-
-Stage 1: Strict Source Grounding (Anti-Hallucination Guardrail)
- * Constraint: The AI agent is strictly prohibited from extrapolating numerical data, p-values, Z-factors, assay sensitivity metrics, or citations not explicitly present in the primary laboratory notebook (ELN/LIMS) or source dataset.
- * Mechanism: Any missing experimental parameter triggers a [DATA_REQUIRED] flag rather than speculative text generation.
-Stage 2: Methodological & Statistical Coherence Audit
- * Evaluates alignment between the Materials & Methods section and reported Results:
-   * Verifies that every assay mentioned in Results (e.g., ELISA, Western Blot, FRET-HTS, PCR, HPLC, Fluorescence Microscopy) has corresponding reagent, instrument calibration, and control parameters defined in Methods.
-   * Checks statistical reporting consistency (e.g., SD vs. SEM, replicate count n, GraphPad Prism / STATISTICA model specifications).
-Stage 3: Clinical & Laboratory Compliance Check (CLIA / CAP / GLP)
- * Designed for clinical reference laboratories and diagnostic product rollouts:
-   * Pre-Analytical Clarity: Audits specimen collection instructions, transport constraints, and test utilization guidance for clinical test directories.
-   * Project & Validation Documentation: Standardizes structure for analytical method validation summaries, turnaround time (TAT) workflows, and cross-departmental scientific communications.
-Stage 4: Bilingual Academic & Executive Calibration (EN / RU)
- * Eliminates machine-translation artifacts ("AI-ese") in cross-border scientific collaborations.
- * Enforces precise domain terminology across English and Russian scientific standards (peer-reviewed journals, NIH-NCATS progress reports, and international environmental biotechnology specifications).
+[Stage 1: Source Grounding] -> [Stage 2: Structural Audit] -> [Stage 3: Fact & Metric Verification] -> [Stage 4: Regulatory & Venue Polish]
 ```
-2. Production Prompt Template: Hallucination-Mitigation Scientific Auditor
-Below is the core system prompt template used to audit technical reports and research manuscripts:
+
+1. **Strict source grounding (anti-hallucination guardrail).** The AI agent is prohibited from extrapolating numerical data, p-values, Z-factors, assay sensitivity metrics, or citations not explicitly present in the primary laboratory notebook (ELN/LIMS) or source dataset. Any missing experimental parameter triggers a `[DATA_REQUIRED]` flag rather than speculative text.
+2. **Methodological and statistical coherence audit.** Every assay mentioned in Results (ELISA, Western blot, FRET-HTS, PCR, HPLC, fluorescence microscopy) must have its reagents, instrument calibration and controls defined in Methods; statistical reporting must be consistent (SD vs. SEM, replicate count n, GraphPad Prism / STATISTICA model specifications).
+3. **Clinical and laboratory compliance check (CLIA / CAP / GLP).** Pre-analytical clarity of specimen collection, transport and test-utilization guidance in clinical test directories; standard structure for analytical method validation summaries, turnaround-time workflows and cross-departmental scientific communication.
+4. **Bilingual academic and executive calibration (EN / RU).** Removes machine-translation artifacts and enforces domain terminology across English and Russian scientific standards (peer-reviewed journals, NIH-NCATS progress reports, international environmental biotechnology specifications).
+
+### Production prompt template: hallucination-mitigation scientific auditor
+
+```text
 ### ROLE
-You are a Senior Scientific Auditor and Lead Editor specializing in Microbiology, Molecular Biology, Clinical Diagnostics, and Aquatic & Environmental Sciences.
+You are a Senior Scientific Auditor and Lead Editor specializing in Microbiology, Molecular Biology,
+Clinical Diagnostics, and Aquatic & Environmental Sciences.
 
 ### HARD CONSTRAINTS (HALLUCINATION-MITIGATION PROTOCOL)
-1. NEVER invent, extrapolate, or modify experimental numbers, concentrations, p-values, sample sizes, or literature citations.
-2. Flag any claim lacking direct evidence in the provided source text with: `[UNVERIFIED CLAIM: Requires Source Data]`.
-3. Cross-check all assay descriptions (PCR, ELISA, FRET, MIC50, HPLC, Microscopy) for internal consistency between Methods and Results.
+1. NEVER invent, extrapolate, or modify experimental numbers, concentrations, p-values, sample sizes,
+   or literature citations.
+2. Flag any claim lacking direct evidence in the provided source text with:
+   [UNVERIFIED CLAIM: Requires Source Data]
+3. Cross-check all assay descriptions (PCR, ELISA, FRET, MIC50, HPLC, Microscopy) for internal
+   consistency between Methods and Results.
 
 ### AUDIT RUBRIC (Score 1-10 per category)
 1. Scientific & Mechanistic Rigor: Are biological pathways and ecological/assay principles stated accurately?
-2. Methodological Reproducibility: Are controls (positive, negative, sterility), reagents, and statistical tests clearly defined?
+2. Methodological Reproducibility: Are controls (positive, negative, sterility), reagents, and statistical
+   tests clearly defined?
 3. Regulatory & Data Integrity (GLP/CLIA): Does the terminology adhere to Good Documentation Practices?
 4. Clarity & Conciseness: Remove redundant prose while preserving technical precision.
 
@@ -54,20 +103,23 @@ You are a Senior Scientific Auditor and Lead Editor specializing in Microbiology
 - Section 1: Quantitative Audit Score & Critical Red Flags
 - Section 2: Line-by-Line Fact & Consistency Verification Table
 - Section 3: Polished, Publication-Ready Text
+```
 
-3. Proven Impact in Research & Clinical Operations
- * Faster Documentation Turnaround: Deployed during antibacterial drug discovery research (Rutgers University) to streamline data synthesis and NIH-NCATS collaborator reporting.
- * Cross-Functional Clinical Alignment: Applied principles derived from managing 150+ clinical diagnostic assay launches and 200+ physician/biotech accounts in CLIA/CAP-regulated reference laboratories.
-## 4. Data Governance for Clinical & Regulated Inputs
+### Where the protocol comes from
+
+- **Research documentation:** applied during antibacterial drug discovery research (Rutgers University) to streamline data synthesis and NIH-NCATS collaborator reporting.
+- **Clinical operations:** principles derived from managing 150+ clinical diagnostic assay launches and 200+ physician/biotech accounts in CLIA/CAP-regulated reference laboratories.
+
+### Data governance for clinical and regulated inputs
 
 This protocol assumes it runs **only** on data the operator is authorized to process. Before any document enters the pipeline:
 
 - **De-identification first.** No protected health information (PHI), patient identifiers, or site-identifying details enter the model context. De-identify per HIPAA Safe Harbor / Expert Determination (or the applicable local regime) *before* Stage 1.
 - **No training on inputs.** Use enterprise / zero-retention API instances only — endpoints contractually excluded from model training. Consumer chatbots are not acceptable for regulated or unpublished material.
 - **Unpublished data & IP.** Manuscripts, ELN/LIMS extracts, and assay validation data are processed only with the data owner's written authorization; employer and collaborator agreements govern what may leave the institutional boundary.
-- **Audit trail.** Every run logs: source document hash, model ID and version, the prompt template version, and the [DATA_REQUIRED] / [UNVERIFIED CLAIM] flags raised. The log — not the chat history — is the record of what was checked.
+- **Audit trail.** Every run logs: source document hash, model ID and version, the prompt template version, and the `[DATA_REQUIRED]` / `[UNVERIFIED CLAIM]` flags raised. The log — not the chat history — is the record of what was checked.
 
-## 5. Worked Example (illustrative excerpt)
+### Worked example (illustrative excerpt)
 
 *The passage below is a synthetic illustration of the audit format, not a real document.*
 
@@ -79,7 +131,18 @@ This protocol assumes it runs **only** on data the operator is authorized to pro
 - **[UNVERIFIED CLAIM: Requires Source Data]** — "various concentrations" (exact range not stated); "measured at OD600" (no wavelength/time given).
 - **Polished rewrite:** "MICs were determined by broth microdilution per CLSI M07. E. coli ATCC 25922 was grown overnight on non-selective agar; colonies were suspended to 0.5 McFarland (~1.5×10⁸ CFU/mL) and diluted 1:100 in cation-adjusted Mueller-Hinton broth (CAMHB). Compound X was serially diluted 2-fold in CAMHB (final range [DATA_REQUIRED] µg/mL); wells were inoculated to a final density of ~5×10⁵ CFU/mL, incubated at 35 ± 2 °C for 16–20 h, and read as the lowest concentration with no visible growth. Sterility (medium-only) and growth (compound-free) controls were included on each plate."
 
-Author
-Rigjita Baldanova, Ph.D.
-Ph.D. Biologist & Scientific Project Manager | AI Systems Evaluator
-LinkedIn: https://linkedin.com/in/rigjita-baldanova
+## Citation
+
+Use GitHub's **Cite this repository** button (from [`CITATION.cff`](CITATION.cff)), or:
+
+Baldanova, R. (2026). *Scientific Editor — AI Protocol* (Agent Skill, v4.8).\
+<https://github.com/Rigjite/Scientific-Editor-AI-Protocol>
+
+## License
+
+[CC BY 4.0](LICENSE).
+
+## Author
+
+Rigjita Baldanova, Ph.D. — Ph.D. Biologist & Scientific Project Manager | AI Systems Evaluator\
+LinkedIn: <https://linkedin.com/in/rigjita-baldanova>
