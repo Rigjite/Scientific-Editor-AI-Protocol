@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this skill, please cite it as below."
+title: "Scientific Editor — AI Protocol (Agent Skill)"
+type: software
+authors:
+  - family-names: Baldanova
+    given-names: Rigjita
+    orcid: "https://orcid.org/0009-0009-7891-7007"
+version: "5.0"
+date-released: "2026-10-24"
+license: CC-BY-4.0
+repository-code: "https://github.com/Rigjite/Scientific-Editor-AI-Protocol"
+abstract: >-
+  An Agent Skill for editing and pre-submission auditing of scientific
+  manuscripts in Russian and English. It verifies claims against sources and
+  sources against reality, runs four gates (sources, internal facts,
+  provenance and conflicts of interest, falsifiability), scores the text on a
+  venue-calibrated rubric and returns an editorial recommendation. Bundled
+  standard-library tools: a GOST-aware formatting linter and a version diff
+  for reviewing edits.
+keywords:
+  - scientific editing
+  - peer review
+  - research integrity
+  - agent skill
+  - GOST
+  - bilingual
