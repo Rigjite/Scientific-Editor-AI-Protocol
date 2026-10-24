@@ -1,7 +1,7 @@
 # Scientific Editor — AI Protocol
 
 [![tests](https://github.com/Rigjite/Scientific-Editor-AI-Protocol/actions/workflows/tests.yml/badge.svg)](https://github.com/Rigjite/Scientific-Editor-AI-Protocol/actions/workflows/tests.yml)
-![version 4.9](https://img.shields.io/badge/version-4.9-blue)
+![version 5.0](https://img.shields.io/badge/version-5.0-blue)
 [![Agent Skill](https://img.shields.io/badge/Agent_Skill-agentskills.io-6f42c1)](https://agentskills.io)
 ![Python 3.9+, standard library only](https://img.shields.io/badge/python-3.9%2B_stdlib_only-3776AB)
 [![License: CC BY 4.0](https://img.shields.io/badge/license-CC_BY_4.0-lightgrey)](LICENSE)
@@ -9,7 +9,7 @@
 **Author:** Rigjita Baldanova, Ph.D. ([ORCID 0009-0009-7891-7007](https://orcid.org/0009-0009-7891-7007))\
 **Domain:** AI-assisted scientific editing and pre-submission audit | Bilingual (EN/RU) | Clinical & biotech documentation
 
-An Agent Skill that edits and audits scientific manuscripts in Russian and English — journal articles (Scopus, WoS, ВАК), conference volumes, theses — without inventing data. It checks every claim against its source and the source against reality, runs four gates, scores the text against the bar of the target venue, and returns a structured report with an editorial recommendation. The full instructions are in [`SKILL.md`](SKILL.md).
+An Agent Skill that writes, edits and audits scientific texts in Russian and English — journal articles and reviews (Scopus, WoS, ВАК), conference theses (тезисы), extended abstracts, theses — without inventing data. It checks every claim against its source and the source against reality, runs four gates, scores the text against the bar of the target venue, and returns a structured report with an editorial recommendation. The full instructions are in [`SKILL.md`](SKILL.md).
 
 ## What it checks
 
@@ -22,7 +22,9 @@ An Agent Skill that edits and audits scientific manuscripts in Russian and Engli
 
 Seven rubric dimensions (1–5, anchored) are calibrated to the venue: a РИНЦ conference volume, a ВАК thesis, a Q2 or a Q1 journal. On request the overall score is also given out of 10 (mean × 2), always next to the seven dimension scores.
 
-**Modes:** `audit-only` (default — a report, no changes to the text), `edit`, `pre-submission`, and `review-edits` — judging changes that another model or a co-author made to a base version.
+**Modes:** `audit-only` (default — a report, no changes to the text), `draft` (write a first draft from the author's own material), `edit`, `pre-submission`, and `review-edits` — judging changes that another model or a co-author made to a base version.
+
+**Draft mode (v5.0).** The author gives the core in their own words — the main result in one sentence, why it matters, what is new, what is not yet known (dictation is fine). The skill builds the genre's outline ([`references/genres.md`](references/genres.md): article, review, conference theses, extended abstract, poster) with the moves of each section ([`references/sections.md`](references/sections.md): Swales's CARS introduction, discussion moves, ГОСТ abstracts, how sure to sound), waits for approval, drafts while keeping the author's sentences, and marks what only the author can supply as `[АВТОР: …]`. It never invents numbers, results or citations. Every draft ends with three before → after pairs from the author's own material, so the author learns the pattern.
 
 **Voice pass (v4.9).** Academic text written with AI help often reads as machine-made: no author in it, three thoughts glued into one sentence with semicolons and dashes, chains of nouns where a verb would do, and conclusions that repeat the abstract. The voice pass rewrites toward classic academic style — the author shows the reader what the author has seen, precisely and in proportion to the evidence — and checks afterwards that no number or citation changed. It is about clear human prose, not about hiding AI use: AI assistance stays disclosed.
 
@@ -47,6 +49,8 @@ Ask in plain language, for example:
 - «Проверь статью по scientific-editor: конференция РИНЦ, режим audit-only, лимит 8 страниц. Оцени по 10-балльной шкале.»
 - «Разбери правку: база — v9.docx, правка соавтора — v9.1.docx. Запрещено возвращать: коммерческие цифры, названия объектов X и Y.»
 - «Убери машинный стиль: режим edit, проход «голос», факты не трогать; покажи три пары «было → стало».»
+- «Напиши тезисы для конференции (2 страницы, РИНЦ) по моим заметкам: главное — …»
+- «Режим draft: научная статья, 8 страниц; вот мои данные и надиктовка. Сначала покажи план.»
 - "Audit this manuscript for a Q2 journal, pre-submission mode; sources are uploaded."
 
 The report follows [`assets/report_template.md`](assets/report_template.md): intake card, summary with gate verdicts, claim–evidence matrix, disclosure checklist, rubric, formatting, open items, and — in review-edits mode — a per-change decision table.
@@ -60,6 +64,9 @@ python3 mse_lint.py manuscript.docx          # .docx, .md or .txt; --json for ma
 
 # review-edits: changed sentences, NEW NUMBER / NEW CITATION / FORBIDDEN / MISSING NUMBER flags, length change
 python3 mse_diff.py base.docx edited.docx --forbid "term1,term2"
+
+# genre: parts, Introduction and Discussion moves, abstract ≤ 250 words, 3–15 keywords, title, length
+python3 mse_genre.py manuscript.docx --genre article      # also: review, theses, extended-abstract
 
 # voice: author's "we", sentence rhythm, glued clauses, noun chains, stock phrases, abstract-conclusions repetition
 python3 mse_style.py manuscript.docx --reference my_own_paper_2003.docx
@@ -147,7 +154,7 @@ This protocol assumes it runs **only** on data the operator is authorized to pro
 
 Use GitHub's **Cite this repository** button (from [`CITATION.cff`](CITATION.cff)), or:
 
-Baldanova, R. (2026). *Scientific Editor — AI Protocol* (Agent Skill, v4.9).\
+Baldanova, R. (2026). *Scientific Editor — AI Protocol* (Agent Skill, v5.0).\
 <https://github.com/Rigjite/Scientific-Editor-AI-Protocol>
 
 ## License

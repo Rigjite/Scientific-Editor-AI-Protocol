@@ -16,6 +16,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 import mse_diff  # noqa: E402
+import mse_genre  # noqa: E402
 import mse_lint  # noqa: E402
 import mse_style  # noqa: E402
 
@@ -229,6 +230,88 @@ class StyleTests(unittest.TestCase):
             with redirect_stdout(io.StringIO()):
                 self.assertEqual(mse_style.main(["mse_style.py", b]), 0)
                 self.assertEqual(mse_style.main(["mse_style.py", os.path.join(d, "none.md")]), 2)
+
+
+ARTICLE = """УДК 574.5
+Расчистка дна без перехвата стоков не выводит городское озеро из гипертрофии
+Аннотация. Городское озеро сильно загрязнено. Мы сравнили три сценария восстановления и показали, что только сочетание мер даёт устойчивый результат.
+Ключевые слова: озеро; эвтрофирование; расчистка; ветланды
+Введение
+Эвтрофирование городских озёр хорошо описано [1, 2]. Однако эффект сочетания мер для мелких озёр тропиков не изучен. Цель работы — сравнить сценарии восстановления.
+Материалы и методы
+Мы использовали опубликованные данные 80 проб за 2022–2023 гг. [3].
+Результаты
+Индекс загрязнения составил 2,5 при пороге 1,0.
+Обсуждение
+Результат согласуется с данными [4]. Ограничение работы — отсутствие данных о составе ила. Следует начать с анализа ила.
+Выводы
+1. Только сочетание мер даёт устойчивое улучшение.
+Список источников
+1. А. 2. Б. 3. В. 4. Г.
+"""
+
+THESES_OK = """Ветланды не выводят городское озеро из гипертрофии
+Цель работы — оценить, может ли ветланд один снизить фосфор до порога гипертрофии. Мы проанализировали опубликованные данные 80 проб.
+Фосфор во влажный сезон превышал 0,4 мг/л во всех точках; при удалении 46 % индекс снизится с 90,5 до 81,7.
+Вывод: ветланд необходим, но недостаточен.
+"""
+
+THESES_BAD = """К вопросу о состоянии водоёмов
+В данной работе рассматриваются вопросы состояния водоёмов и их значение для общества.
+"""
+
+
+class GenreTests(unittest.TestCase):
+    def test_complete_article_is_clean(self):
+        found, summary = mse_genre.check(ARTICLE.splitlines(), "article")
+        self.assertEqual(found, [], found)
+        self.assertEqual(summary["keywords_counts"], [4])
+
+    def test_missing_gap_and_discussion_moves(self):
+        text = ARTICLE.replace("Однако эффект сочетания мер для мелких озёр тропиков не изучен. ", "")
+        text = text.replace("Результат согласуется с данными [4]. Ограничение работы — отсутствие данных о составе ила. ", "")
+        msgs = " ".join(m for _, m in mse_genre.check(text.splitlines(), "article")[0])
+        self.assertIn("gap", msgs)
+        self.assertIn("comparison", msgs)
+        self.assertIn("limitations", msgs)
+
+    def test_missing_sections_for_article(self):
+        text = ARTICLE.replace("Обсуждение\n", "").replace("Материалы и методы\n", "")
+        msgs = [m for _, m in mse_genre.check(text.splitlines(), "article")[0]]
+        self.assertIn("no 'methods' section heading", msgs)
+
+    def test_abstract_limits_and_keywords(self):
+        long_abs = "Аннотация. В данной статье рассматриваются " + "слово " * 260
+        text = ARTICLE.replace(ARTICLE.splitlines()[2], long_abs).replace("озеро; эвтрофирование; расчистка; ветланды", "озеро")
+        checks = [m for c, m in mse_genre.check(text.splitlines(), "article")[0] if c == "limits"]
+        self.assertTrue(any("more than 250" in m for m in checks))
+        self.assertTrue(any("filler" in m for m in checks))
+        self.assertTrue(any("expected 3–15" in m for m in checks))
+
+    def test_review_needs_selection_method(self):
+        msgs = " ".join(m for _, m in mse_genre.check(ARTICLE.splitlines(), "review")[0])
+        self.assertIn("searched and selected", msgs)
+
+    def test_theses(self):
+        self.assertEqual(mse_genre.check(THESES_OK.splitlines(), "theses")[0], [])
+        checks = {c for c, _ in mse_genre.check(THESES_BAD.splitlines(), "theses")[0]}
+        self.assertEqual(checks, {"moves", "title"})
+
+    def test_length_limits(self):
+        found, _ = mse_genre.check(THESES_OK.splitlines(), "theses", max_chars=100)
+        self.assertIn("length", {c for c, _ in found})
+        long_theses = THESES_OK + ("Дополнительный текст без нового смысла. " * 250)
+        self.assertIn("length", {c for c, _ in mse_genre.check(long_theses.splitlines(), "theses")[0]})
+
+    def test_cli(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "a.md")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(ARTICLE)
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(mse_genre.main(["mse_genre.py", path, "--genre", "article"]), 0)
+                self.assertEqual(mse_genre.main(["mse_genre.py", path, "--genre", "theses", "--max-chars", "50"]), 1)
+                self.assertEqual(mse_genre.main(["mse_genre.py", path, "--genre", "novel"]), 2)
 
 
 if __name__ == "__main__":
