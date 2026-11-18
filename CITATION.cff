@@ -6,23 +6,38 @@ authors:
   - family-names: Baldanova
     given-names: Rigjita
     orcid: "https://orcid.org/0009-0009-7891-7007"
-version: "5.0"
-date-released: "2026-10-24"
-doi: 10.5281/zenodo.23627929
+version: "5.2"
+date-released: "2026-11-17"
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23627929
+    description: "DOI of v5.0. Each GitHub release receives its own version DOI on Zenodo."
 license: CC-BY-4.0
 repository-code: "https://github.com/Rigjite/Scientific-Editor-AI-Protocol"
 abstract: >-
-  An Agent Skill for editing and pre-submission auditing of scientific
-  manuscripts in Russian and English. It verifies claims against sources and
-  sources against reality, runs four gates (sources, internal facts,
-  provenance and conflicts of interest, falsifiability), scores the text on a
-  venue-calibrated rubric and returns an editorial recommendation. Bundled
-  standard-library tools: a GOST-aware formatting linter and a version diff
-  for reviewing edits.
+  An Agent Skill for writing, editing and pre-submission auditing of
+  scientific and technical texts in Russian, English and Japanese: journal articles,
+  reviews, conference theses, extended abstracts, monographs, grant
+  applications, research reports, technical documentation, popular-science
+  articles, presentations and letters to editors. It drafts from the author's own
+  material in the genre's structure without inventing data, verifies claims
+  against sources and sources against reality, runs four gates (sources,
+  internal facts, provenance and conflicts of interest with the statements the venue
+  requires, falsifiability), offers a voice pass that removes bureaucratic
+  and template phrasing in the register of the genre, and a language
+  check for grammar, spelling and punctuation, with facts frozen,
+  scores the text on a venue-calibrated rubric and
+  returns an editorial recommendation. Bundled standard-library tools: a
+  GOST-aware formatting linter, a version diff for reviewing edits, style
+  diagnostics, a genre check and a check for mechanical language slips.
 keywords:
   - scientific editing
   - peer review
   - research integrity
   - agent skill
   - GOST
-  - bilingual
+  - multilingual
+  - Japanese
+  - proofreading
+  - grant writing
+  - plain language

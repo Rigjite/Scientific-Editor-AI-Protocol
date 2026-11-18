@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for mse_lint.py and mse_diff.py (standard library only).
+"""Unit tests for mse_lint.py, mse_diff.py, mse_style.py, mse_genre.py and mse_grammar.py (standard library only).
 
 Run from the repository root:  python3 tests/test_tools.py
 All fixtures are synthetic; no real manuscript is stored in this repository.
@@ -17,6 +17,7 @@ sys.path.insert(0, ROOT)
 
 import mse_diff  # noqa: E402
 import mse_genre  # noqa: E402
+import mse_grammar  # noqa: E402
 import mse_lint  # noqa: E402
 import mse_style  # noqa: E402
 
@@ -313,6 +314,323 @@ class GenreTests(unittest.TestCase):
                 self.assertEqual(mse_genre.main(["mse_genre.py", path, "--genre", "theses", "--max-chars", "50"]), 1)
                 self.assertEqual(mse_genre.main(["mse_genre.py", path, "--genre", "novel"]), 2)
 
+
+class KnownLimitFixTests(unittest.TestCase):
+    """Regression tests for the blind spots listed in SKILL.md, Appendix T (v5.1 review)."""
+
+    def test_labels_on_their_own_lines(self):
+        def variant(sentences):
+            return (ARTICLE.replace(ARTICLE.splitlines()[2], "Аннотация\n" + "Городское озеро сильно загрязнено. " * sentences)
+                    .replace("Ключевые слова: озеро; эвтрофирование; расчистка; ветланды",
+                             "Ключевые слова:\nозеро; эвтрофирование; расчистка"))
+        found, summary = mse_genre.check(variant(60).splitlines(), "article")
+        self.assertEqual((summary["abstract_words"], summary["keywords_counts"]), ([240], [3]))
+        self.assertEqual(found, [], found)
+        found, _ = mse_genre.check(variant(70).splitlines(), "article")
+        self.assertTrue(any("more than 250" in m for _, m in found), found)
+
+    def test_stock_phrase_is_not_an_implication(self):
+        text = ARTICLE.replace("Следует начать с анализа ила.", "Следует отметить, что выборка мала.")
+        msgs = " ".join(m for _, m in mse_genre.check(text.splitlines(), "article")[0])
+        self.assertIn("implications", msgs)
+
+    def test_section_and_figure_numbers_are_not_decimals(self):
+        text = "Согласно ГОСТ Р 7.0.7-2021, §4.10, и данным рис. 1.2, табл. 2.1 и п. 3.4 значение равно 3,5 мг/л.\n"
+        self.assertEqual(lint_text(text), [])
+        self.assertEqual([c for c, _, _ in lint_text("Значение составило 3.5 мг/л.\n")], ["decimal"])
+
+    def test_us_country_is_not_author_voice(self):
+        text = ("Introduction\nLake monitoring in the US relies on state agencies that publish nutrient data "
+                "every year, and the US network covers thousands of sites.")
+        self.assertEqual(mse_style.profile(text.splitlines())["author_voice"], 0)
+        text2 = text.replace("covers", "lets us compare")
+        self.assertEqual(mse_style.profile(text2.splitlines())["author_voice"], 1)
+
+
+ROBOTIC_V52 = """Введение
+В современном мире цифровые двойники играют ключевую роль в управлении озёрами. Это не просто модель, а инструмент управления. Исследования показывают, что двойники снижают затраты. Таким образом, двойники важны для отрасли.
+Не только экологи, но и экономисты проявляют интерес к двойникам водоёмов. Специалисты отмечают, что точность прогноза растёт с каждым годом. Была проведена оценка точности на трёх озёрах. Подводя итог, можно сказать, что подход перспективен.
+Двойник — это не просто карта, а живая система наблюдений и расчётов. Учёные считают, что данные спутников полезны для прогноза. Осуществлён анализ ошибок модели на независимых данных. В целом, результаты подтверждают ценность подхода.
+Важно подчеркнуть, что выполнена проверка модели на независимых данных за два года. Это не столько технология, сколько способ мышления о водоёме. Следовательно, внедрение необходимо во всех регионах.
+"""
+
+PLAIN_V52 = """Введение
+Мы сравнили три озера, которые питаются стоками одного района. Ил с конца ледниковой эпохи в эпоху голоцена накапливал фосфор, и сегодня он отдаёт его воде каждое лето. Фосфор приходит не только со стоками, но и из ила [2], поэтому одна расчистка не помогает. Исследования показывают, что ветланды задерживают до половины фосфора [3]. Мы проверили, хватит ли этого для нашего района.
+"""
+
+ROBOTIC_EN_V52 = """Introduction
+In today's fast-paced world, lake restoration is not just a technical task, but a social one. Studies show that wetlands remove phosphorus. We performed a detailed analysis of the samples. Overall, the approach is promising.
+It's not about the data, it's about the decisions we make with it. Experts agree that monitoring is essential. We conducted an assessment of three lakes. Ultimately, restoration requires cooperation.
+Restoration is not only ecological but also economic. We carried out a comparison of costs (Smith et al. 2020 report similar values). Studies show that costs fall over time [4]. In summary, early action pays off.
+"""
+
+
+class VoiceV52Tests(unittest.TestCase):
+    """Template markers added in v5.2 (references/voice.md)."""
+
+    def checks(self, text):
+        p = mse_style.profile(text.splitlines())
+        return p, {c for c, _ in mse_style.flags(p)}
+
+    def test_russian_template_patterns(self):
+        p, checks = self.checks(ROBOTIC_V52)
+        self.assertTrue({"frames", "tails", "attribution", "verbs", "stock"} <= checks, checks)
+        self.assertEqual(len(p["contrast_frames"]), 4)  # one frame matched by two patterns counts once
+        self.assertEqual(p["summary_tails"], 4)
+        self.assertEqual(len(p["vague_attributions"]), 3)
+        self.assertEqual(len(p["split_predicates"]), 3)
+
+    def test_plain_text_with_citations_is_not_flagged(self):
+        p, checks = self.checks(PLAIN_V52)
+        self.assertFalse({"frames", "tails", "attribution", "verbs", "stock"} & checks, checks)
+        self.assertEqual(p["vague_attributions"], [])  # "Исследования показывают … [3]" has a citation
+        self.assertEqual(len(p["contrast_frames"]), 1)  # one «не только…, но и» is normal Russian
+
+    def test_english_template_patterns(self):
+        p, checks = self.checks(ROBOTIC_EN_V52)
+        self.assertTrue({"frames", "tails", "attribution", "verbs", "stock"} <= checks, checks)
+        self.assertEqual(len(p["vague_attributions"]), 2)  # the cited "Studies show … [4]" is not counted
+
+    def test_impersonal_register_has_no_voice_flag(self):
+        text = "Введение\n" + " ".join(["Пробы воды отобраны в июле и проанализированы по стандартной методике."] * 60)
+        p = mse_style.profile(text.splitlines())
+        self.assertIn("voice", {c for c, _ in mse_style.flags(p)})
+        self.assertNotIn("voice", {c for c, _ in mse_style.flags(p, impersonal=True)})  # ГОСТ report register
+
+    def test_uniform_paragraphs(self):
+        para = "Мы измерили фосфор в пробах воды и ила каждого озера в начале и в конце лета прошлого года."
+        uniform = "Введение\n" + "\n".join([para] * 6)
+        varied = "Введение\n" + "\n".join([para, para + " " + para + " " + para, para, para + " " + para, para, para])
+        self.assertIn("layout", self.checks(uniform)[1])
+        self.assertNotIn("layout", self.checks(varied)[1])
+
+
+GRANT_OK = """Прогноз цветения цианобактерий в мелких озёрах по спутниковым данным
+Цель проекта — построить и проверить прогноз цветения на 7 дней для трёх озёр. Задачи: собрать ряды данных, обучить модель, проверить её на 2027 году.
+Актуальность. Цветение закрывает водозаборы, а прогнозов для мелких озёр нет.
+Новизна: для этих озёр мы объединим спутниковые и наземные данные; поиск по Scopus в 2026 году аналогов не нашёл.
+Методы: ассимиляция данных, проверка против нулевой модели.
+Риски и альтернативы: облачность закрывает снимки; запасной путь — данные датчиков.
+План работ: этап 1 — 2027 год, этап 2 — 2028 год.
+Ожидаемые результаты: прогноз с ошибкой не более 20 %, показатель — доля верных тревог.
+"""
+
+GRANT_BAD = """Революционный подход к экологии озёр
+Наш уникальный проект не имеет аналогов в мире и станет настоящим прорывом в науке. Мы изучим озёра и улучшим их состояние.
+"""
+
+REPORT_OK = """ОТЧЁТ О НАУЧНО-ИССЛЕДОВАТЕЛЬСКОЙ РАБОТЕ
+РЕФЕРАТ
+Отчёт 45 с., 6 рис., 3 табл., 28 источн., 2 прил.
+ОЗЕРО, ФОСФОР, ЦВЕТЕНИЕ, ПРОГНОЗ, СПУТНИКОВЫЕ ДАННЫЕ
+Объект исследования — мелкие озёра. Цель работы — прогноз цветения. Методы — ассимиляция данных. Результаты: ошибка прогноза 18 %.
+СОДЕРЖАНИЕ
+Введение 4
+ВВЕДЕНИЕ
+Работа выполнена по договору.
+ЗАКЛЮЧЕНИЕ
+Задачи решены полностью.
+СПИСОК ИСПОЛЬЗОВАННЫХ ИСТОЧНИКОВ
+1. Источник.
+"""
+
+POPSCI_BAD = """Учёные доказали: кофе защищает от болезни
+Сенсация! Исследование показало, что кофе связан с меньшим риском болезни. Опыты на мышах показали, что кофе защищает людей от старения.
+"""
+
+POPSCI_OK = """Чашка кофе в день и память: что показало новое исследование
+Исследователи наблюдали за 2000 людьми десять лет. У тех, кто пил кофе, память ухудшалась медленнее. Это связь, а не доказанная причина: часть различий может объясняться образом жизни. Пока неизвестно, будет ли тот же эффект у тех, кто начнёт пить кофе специально. Статья опубликована в журнале в 2025 году.
+"""
+
+
+class AppliedGenreTests(unittest.TestCase):
+    """Genres added in v5.2 (references/genres-applied.md)."""
+
+    def checks(self, text, genre):
+        found, _ = mse_genre.check(text.splitlines(), genre)
+        return found
+
+    def test_grant(self):
+        self.assertEqual(self.checks(GRANT_OK, "grant"), [])
+        found = self.checks(GRANT_BAD, "grant")
+        labels = " ".join(m for _, m in found)
+        for missing in ("aims", "risks", "work plan", "expected results"):
+            self.assertIn(missing, labels)
+        self.assertIn("прорывом в науке", labels)
+
+    def test_report_gost_7_32(self):
+        self.assertEqual(self.checks(REPORT_OK, "report"), [])
+        bad = REPORT_OK.replace("Отчёт 45 с., 6 рис., 3 табл., 28 источн., 2 прил.\n", "").replace(
+            "ОЗЕРО, ФОСФОР, ЦВЕТЕНИЕ, ПРОГНОЗ, СПУТНИКОВЫЕ ДАННЫЕ", "ОЗЕРО, ФОСФОР").replace("ЗАКЛЮЧЕНИЕ\n", "")
+        labels = " ".join(m for _, m in self.checks(bad, "report"))
+        self.assertIn("volume", labels)
+        self.assertIn("2 keywords", labels)
+        self.assertIn("ЗАКЛЮЧЕНИЕ", labels)
+        long_ref = REPORT_OK.replace("Результаты: ошибка прогноза 18 %.", "Результаты: ошибка прогноза 18 %. " * 120)
+        self.assertIn("850", " ".join(m for _, m in self.checks(long_ref, "report")))
+
+    def test_popsci(self):
+        self.assertEqual(self.checks(POPSCI_OK, "popsci"), [])
+        checks = {c for c, _ in self.checks(POPSCI_BAD, "popsci")}
+        self.assertEqual(checks, {"source", "uncertainty", "claims"})
+        labels = " ".join(m for _, m in self.checks(POPSCI_BAD, "popsci"))
+        self.assertIn("animal", labels)
+        self.assertIn("association", labels)
+
+    def test_breakthrough_infection_is_not_hype(self):
+        text = "Breakthrough infections after vaccination\nWe aim to test whether antibodies fall; methods: we measured 200 sera."
+        self.assertFalse(any(c == "claims" for c, _ in self.checks(text, "theses")))
+
+
+
+class PilotFixesTests(unittest.TestCase):
+    """Fixes from the first run on the author's own manuscripts (v5.2, 17 November 2026); synthetic fixtures only."""
+
+    def test_numbered_heading_with_subtitle_is_recognised(self):
+        self.assertEqual(mse_genre.classify_heading("1. Введение: постановка задачи"), "introduction")
+        self.assertEqual(mse_genre.classify_heading("8. Выводы и заключение"), "conclusions")
+        self.assertEqual(mse_genre.classify_heading("II. Methods — field sampling"), "methods")
+        self.assertIsNone(mse_genre.classify_heading("1. Паспорт объекта: границы и пороги"))
+
+    def test_overclaims_are_flagged_but_negations_are_not(self):
+        for s in ("Модель доказывает, что меры эффективны.", "Схема гарантирует урожай.",
+                  "Метод отличается исключительной точностью измерений.", "Схема сводит риск потерь к нулю.",
+                  "The model proves that dredging works.", "It guarantees yield."):
+            self.assertTrue(mse_genre.HYPE.search(s), s)
+        for s in ("Это не доказывает, что меры эффективны.", "Схема не гарантирует урожай.", "исключительно в сухой сезон",
+                  "This does not prove that dredging works.", "It cannot guarantee yield."):
+            self.assertFalse(mse_genre.HYPE.search(s), s)
+
+    def test_topic_first_openers_are_not_flagged(self):
+        sents = ["В сухой сезон {} доля фосфора в воде росла заметно.", "Для каждого бассейна {} мы взяли пробы воды и ила.",
+                 "При высокой температуре {} концентрация кислорода падала быстро."]
+        text = "Введение\n" + " ".join(s.format(k) for k in range(5) for s in sents)
+        self.assertNotIn("openers", {c for c, _ in mse_style.flags(mse_style.profile(text.splitlines()))})
+        text2 = "Введение\n" + " ".join(f"Также озеро {k} получало стоки с полей и улиц." for k in range(5))
+        self.assertIn("openers", {c for c, _ in mse_style.flags(mse_style.profile(text2.splitlines()))})
+
+    def test_one_stock_word_in_a_long_text_is_not_flagged(self):
+        para = "Мы отобрали пробы воды в четырёх бассейнах озера и измерили фосфор, азот и прозрачность в оба сезона."
+        text = "Введение\n" + " ".join([para] * 30) + " Этот обзор не является систематическим."
+        p = mse_style.profile(text.splitlines())
+        self.assertEqual(len(p["stock_phrases"]), 1)
+        self.assertNotIn("stock", {c for c, _ in mse_style.flags(p)})
+
+    def test_glosses_and_figure_references_are_not_glue(self):
+        para = ("Цифровой двойник (ЦД) озера (рис. 1) использует индекс загрязнения (WPI) и индекс трофности (TSI), "
+                "а порог устойчивости (tipping point) задаёт сценарии (табл. 2) для каждого бассейна.")
+        p = mse_style.profile(("Введение\n" + " ".join([para] * 8)).splitlines())
+        self.assertEqual(p["parentheses_per_1000"], 0.0)
+        glued = ("Мы взяли пробы (80 проб в четырёх бассейнах за два сезона) и измерили фосфор "
+                 "(общий и растворённый, по стандартной методике) в каждой точке.")
+        self.assertIn("glue", {c for c, _ in mse_style.flags(mse_style.profile(("Введение\n" + " ".join([glued] * 8)).splitlines()))})
+
+    def test_udc_line_is_not_prose(self):
+        text = ("УДК 504.455 МАТЕРИАЛЫ НАУЧНОЙ КОНФЕРЕНЦИИ О ВОДНЫХ ЭКОСИСТЕМАХ И УПРАВЛЕНИИ ПРИРОДНЫМИ РЕСУРСАМИ РЕГИОНА\n"
+                "Введение\nМы измерили фосфор в пробах воды и ила каждого озера в начале и в конце лета прошлого года.")
+        self.assertNotIn("удк", dict(mse_style.profile(text.splitlines())["top_openers"]))
+
+    def test_incomplete_reference_record_is_flagged(self):
+        text = ("Фосфор накапливается в иле [1], а стоки его пополняют [2].\n\nСписок источников\n\n"
+                "1. Иванов И.И. Фосфор в озёрах // Водные ресурсы. 2020.\n"
+                "2. Petrov P. Lake loads // Water. 2021. Vol. 3. P. 10–20. URL: https://example.org/a (дата обращения: 01.11.2026).\n")
+        records = [m for c, _, m in lint_text(text) if c == "record"]
+        self.assertEqual(len(records), 1)
+        self.assertIn("reference 1", records[0])
+
+    def test_url_slashes_are_not_a_record_separator(self):
+        text = ("Технология описана в патенте [1].\n\nСписок источников\n\n"
+                "1. Пат. 123 Япония. Способ обработки ила. URL: https://patents.example.org/p/123 (дата обращения: 12.10.2026).\n")
+        self.assertEqual([c for c, _, _ in lint_text(text)], [])
+
+
+JA_BAD = """はじめに
+本研究では湖の底泥をを分析した。試料は２０２５年に採取しました。濃度は1.2 mg/Lであった。リンの濃度は高いです。この方法で濃度を測定することができる。調査を実施した結果、溶出が多いということになる。
+夜間でも試料は見れる。影響がないわけではない．
+湖沼の底泥に含まれる有機物と栄養塩類の量は季節によって大きく変動し、特に夏季には水温の上昇に伴って微生物の分解活動が活発になるため、底泥からのリンの溶出量が増加し、結果として湖水中の栄養塩濃度が高まり、植物プランクトンの増殖が促進されると考えられる。
+"""
+
+JA_OK = """湖沼底泥からのリン溶出に及ぼす水温の影響
+要旨：本研究では、底泥からのリン溶出に水温が与える影響を室内実験で調べた。溶出速度は水温とともに増加した。
+キーワード：底泥、リン、溶出、水温
+1．はじめに
+浅い湖では底泥からのリン溶出が水質に大きく影響する[1]。しかし、水温の影響は十分に明らかになっていない[2]。本研究の目的は、水温と溶出速度の関係を明らかにすることである。
+2．材料と方法
+2025年8月に柱状試料を3本採取し、15、20、25℃で14日間培養した。試料を見れば違いは明らかであったものの、測定値で比較した。
+3．結果
+溶出速度は15℃で1.2、25℃で3.4 mg/m2/dであった。
+4．考察
+この結果は既往の報告[3]と一致する。ただし、試料は1地点に限られ、一般化には限界がある。今後は複数地点で検証する必要がある。
+5．結論
+水温の上昇は底泥からのリン溶出を促進する。
+参考文献
+[1] 著者A. 題名. 雑誌名. 2020, vol. 1, p. 1-10.
+[2] 著者B. 題名. 雑誌名. 2021, vol. 2, p. 11-20.
+[3] 著者C. 題名. 雑誌名. 2022, vol. 3, p. 21-30.
+"""
+
+
+class LanguageCheckTests(unittest.TestCase):
+    """mse_grammar.py — mechanical slips in Russian, English and Japanese (v5.2); synthetic fixtures only."""
+
+    def kinds(self, text):
+        return [c for c, _, _ in mse_grammar.check(text.splitlines())]
+
+    def test_russian_slips(self):
+        text = ("Мы отобрали пробы в в четырёх бассейнах озера  и измерили фосфор ,азот и прозрачность.\n"
+                "Данные нужны для сельско хозяйственных и научно исследовательских работ.\n")
+        kinds = self.kinds(text)
+        self.assertEqual(kinds.count("repeat"), 1)
+        self.assertEqual(kinds.count("compound"), 2)
+        self.assertIn("space", kinds)
+
+    def test_clean_russian_and_english_pass(self):
+        self.assertEqual(self.kinds(CLEAN), [])
+        self.assertEqual(self.kinds("We know that that result had had an effect, as Smith (2020) showed.\n"), [])
+        self.assertEqual(self.kinds("The the samples were taken in July.\n"), ["repeat"])
+        self.assertEqual(self.kinds("Мы знаем, что что-то изменилось в составе ила за лето.\n"), [])
+        self.assertFalse(mse_lint.is_japanese("PCS Co., Ltd. (株式会社ピーシーエス), Саппоро, Япония"))
+        self.assertTrue(mse_lint.is_japanese("本研究ではPCS法を用いた。"))
+
+    def test_japanese_slips(self):
+        kinds = self.kinds(JA_BAD)
+        for kind in ("style", "punct", "width", "particle", "ra-nuki", "negation", "wordy", "long"):
+            self.assertIn(kind, kinds, kind)
+
+    def test_clean_japanese_passes(self):
+        # 「見れば」 (a conditional), 「ものの」, section numbers «1．» and the reference list are not slips
+        self.assertEqual(self.kinds(JA_OK), [])
+
+    def test_japanese_article_structure(self):
+        found, summary = mse_genre.check(JA_OK.splitlines(), "article")
+        self.assertEqual(found, [], found)
+        self.assertTrue(str(summary["abstract_words"][0]).endswith("字"))
+        self.assertIn("claims", {c for c, _ in mse_genre.check(JA_OK.replace("5．結論\n", "5．結論\nこの手法は画期的である。\n").splitlines(), "article")[0]})
+
+    def test_japanese_reference_heading_and_style_note(self):
+        lines = JA_OK.splitlines()
+        self.assertEqual(lines[mse_lint.split_references(lines)], "参考文献")
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "ja.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(JA_OK)
+            out = io.StringIO()
+            with redirect_stdout(out):
+                code = mse_style.main(["mse_style.py", path])
+            self.assertEqual(code, 0)
+            self.assertIn("not applicable", out.getvalue())
+
+    def test_grammar_cli_exit_codes(self):
+        with tempfile.TemporaryDirectory() as d:
+            good, bad = os.path.join(d, "good.txt"), os.path.join(d, "bad.txt")
+            with open(good, "w", encoding="utf-8") as f:
+                f.write(JA_OK)
+            with open(bad, "w", encoding="utf-8") as f:
+                f.write(JA_BAD)
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(mse_grammar.main(["mse_grammar.py", good]), 0)
+                self.assertEqual(mse_grammar.main(["mse_grammar.py", bad]), 1)
+                self.assertEqual(mse_grammar.main(["mse_grammar.py", os.path.join(d, "missing.txt")]), 2)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
