@@ -43,7 +43,7 @@ Seven rubric dimensions (1–5, anchored) are calibrated to the venue: conferenc
 The skill folder must be named `scientific-editor` — the `name` in `SKILL.md` — whatever this repository is called.
 
 - **Claude Code:** `git clone https://github.com/Rigjite/Scientific-Editor-AI-Protocol ~/.claude/skills/scientific-editor`
-- **Claude app (claude.ai, desktop, mobile):** download the zip from the latest release (the folder inside is named correctly), or zip the folder yourself so that `scientific-editor/SKILL.md` sits at the top of the archive, and upload it as a custom skill in the app's skills settings. If you used v4.7 (`my-scientific-editor-v4-7`), replace it with this one.
+- **Claude app (claude.ai, desktop, mobile):** download the source code (zip) from the latest release and rename the folder inside it to `scientific-editor` (GitHub names it after the repository and the version), or zip the folder yourself so that `scientific-editor/SKILL.md` sits at the top of the archive, and upload it as a custom skill in the app's skills settings. If you used v4.7 (`my-scientific-editor-v4-7`), replace it with this one.
 - **Other Agent Skills clients:** copy the folder into the client's skills directory.
 
 ## Quick start
