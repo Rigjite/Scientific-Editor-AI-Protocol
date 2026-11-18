@@ -108,7 +108,7 @@ The skill grew out of a structured, multi-stage prompt-engineering and audit pro
 1. **Strict source grounding (anti-hallucination guardrail).** The agent is prohibited from extrapolating numerical data, p-values, Z-factors, assay sensitivity metrics, or citations not explicitly present in the primary laboratory notebook (ELN/LIMS) or source dataset. Any missing experimental parameter triggers a `[DATA_REQUIRED]` flag rather than speculative text.
 2. **Methodological and statistical coherence audit.** Every assay mentioned in Results (ELISA, Western blot, FRET-HTS, PCR, HPLC, fluorescence microscopy) must have its reagents, instrument calibration and controls defined in Methods; statistical reporting must be consistent (SD vs. SEM, replicate count n, GraphPad Prism / STATISTICA model specifications).
 3. **Clinical and laboratory compliance check (CLIA / CAP / GLP).** Pre-analytical clarity of specimen collection, transport and test-utilization guidance in clinical test directories; standard structure for analytical method validation summaries, turnaround-time workflows and cross-departmental scientific communication.
-4. **Bilingual academic and executive calibration (EN / RU).** Removes machine-translation artifacts and enforces domain terminology across English and Russian scientific standards (peer-reviewed journals, NIH-NCATS progress reports, international environmental biotechnology specifications).
+4. **Bilingual academic and executive calibration (EN / RU).** Removes machine-translation artifacts and enforces domain terminology across English and Russian scientific standards (peer-reviewed journals, grant progress reports, international environmental biotechnology specifications).
 
 ### Original prompt template: hallucination-mitigation scientific auditor
 
@@ -137,11 +137,6 @@ Clinical Diagnostics, and Aquatic & Environmental Sciences.
 - Section 2: Line-by-Line Fact & Consistency Verification Table
 - Section 3: Polished, Publication-Ready Text
 ```
-
-### Where the protocol comes from
-
-- **Research documentation:** applied during academic antibacterial drug-discovery research to streamline data synthesis and NIH-NCATS collaborator reporting.
-- **Clinical operations:** principles derived from managing 150+ clinical diagnostic assay launches and 200+ physician/biotech accounts in CLIA/CAP-regulated reference laboratories.
 
 ### Data governance for clinical and regulated inputs
 
