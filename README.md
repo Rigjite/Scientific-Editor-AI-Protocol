@@ -174,5 +174,5 @@ DOI (v5.2): [10.5281/zenodo.24330003](https://doi.org/10.5281/zenodo.24330003); 
 
 ## Author
 
-Rigjita Baldanova, Ph.D. — Ph.D. Biologist & Scientific Project Manager | AI Systems Evaluator\
+Rigjita Baldanova, Ph.D. — Biologist & Scientific Project Manager | AI Systems Evaluator\
 ORCID: [0009-0009-7891-7007](https://orcid.org/0009-0009-7891-7007) · LinkedIn: <https://linkedin.com/in/rigjita-baldanova>
