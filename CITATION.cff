@@ -7,11 +7,15 @@ authors:
     given-names: Rigjita
     orcid: "https://orcid.org/0009-0009-7891-7007"
 version: "5.2"
-date-released: "2026-11-17"
+doi: 10.5281/zenodo.24330003
+date-released: "2026-11-18"
 identifiers:
   - type: doi
+    value: 10.5281/zenodo.23627928
+    description: "Concept DOI: all versions."
+  - type: doi
     value: 10.5281/zenodo.23627929
-    description: "DOI of v5.0. Each GitHub release receives its own version DOI on Zenodo."
+    description: "DOI of v5.0."
 license: CC-BY-4.0
 repository-code: "https://github.com/Rigjite/Scientific-Editor-AI-Protocol"
 abstract: >-

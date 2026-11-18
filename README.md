@@ -171,7 +171,7 @@ Use GitHub's **Cite this repository** button (from [`CITATION.cff`](CITATION.cff
 
 Baldanova, R. (2026). *Scientific Editor — AI Protocol* (Agent Skill, v5.2).\
 <https://github.com/Rigjite/Scientific-Editor-AI-Protocol>\
-DOI of v5.0: [10.5281/zenodo.23627929](https://doi.org/10.5281/zenodo.23627929). Each GitHub release receives its own version DOI on Zenodo; the record page also gives a DOI for all versions.
+DOI (v5.2): [10.5281/zenodo.24330003](https://doi.org/10.5281/zenodo.24330003); DOI of v5.0: [10.5281/zenodo.23627929](https://doi.org/10.5281/zenodo.23627929); all versions: [10.5281/zenodo.23627928](https://doi.org/10.5281/zenodo.23627928). Each GitHub release receives its own version DOI on Zenodo.
 
 ## License
 
