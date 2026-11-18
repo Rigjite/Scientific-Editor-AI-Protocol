@@ -63,7 +63,7 @@ Boosters («несомненно», «очевидно», "clearly", "undoubtedl
 
 ## Back matter
 
-Acknowledgments and funding; author contributions and conflicts of interest where the venue asks (ГОСТ Р 7.0.7-2021 lists them); **AI-use disclosure naming the tools and what they were used for** (Gate C).
+Acknowledgments and funding; author contributions and conflicts of interest where the venue asks (ГОСТ Р 7.0.7-2021 lists them); any other statements the venue requires, in its wording (Gate C).
 
 ## Sources
 

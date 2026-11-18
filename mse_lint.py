@@ -11,6 +11,10 @@ Reads .md / .txt / .docx (Python standard library only) and checks:
   3. Russian decimal comma: flags 3.14 in Russian-language lines.
   4. Number–unit spacing: flags digits glued to a Cyrillic word or unit (5мг, 220°C).
   5. Quotation marks: flags straight "…" quotes in Russian-language lines.
+  6. Reference records: an entry with «//» (a part of a journal, a book or a
+     proceedings volume) that has neither pages / an article number nor a
+     DOI or URL — the record is incomplete (ГОСТ Р 7.0.100-2018) and cannot be
+     checked under Gate A.
 
 To avoid false alarms it skips: the reference list (for checks 3–5), lines in
 English or other Latin-script languages, the УДК/UDC line, dates (22.10.2026),
@@ -31,14 +35,18 @@ W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
 REF_HEADING = re.compile(
     r"^\W*(список\s+(использованных\s+)?(источников|литературы)|литература|"
-    r"библиографический\s+список|references|bibliography)\W*$",
+    r"библиографический\s+список|references|bibliography|参考文献|引用文献|参照文献|文献)\W*$",
     re.IGNORECASE,
 )
 CITE_BLOCK = re.compile(r"\[([^\[\]]{1,80})\]")
-REF_ENTRY = re.compile(r"^\s*(?:\[(\d{1,3})\]|(\d{1,3})[.)])\s+\S")
+REF_ENTRY = re.compile(r"^\s*(?:\[(\d{1,3})\]\s+|(\d{1,3})(?:\.\s+|\)\s*))\S")
 DECIMAL = re.compile(r"(?<![\w.,/:\-])(\d+)\.(\d+)(?![\w./])")
 GLUED = re.compile(r"\d(?:°\s?[CС]|[а-яё])", re.IGNORECASE)
 VERSION_WORDS = ("версия", "версии", "версию", "version", "ver", "v", "rev")
+# section, figure and table numbers: «§4.10», «рис. 1.2», «табл. 2.1», «п. 3.4», «разд. 5.2»
+SECTION_WORDS = ("§", "рис.", "табл.", "разд.", "раздел", "разделе", "раздела", "п.", "пп.", "пункт", "пункте",
+                 "гл.", "глава", "главе", "прил.", "приложение", "приложении", "fig.", "table", "section")
+LOCATOR = re.compile(r"((?<![^\W\d_])(?:С|C|P|pp?|Art)\.\s*[\de]|\bArticle\s+\d|\be\d{4,}|doi|10\.\d{4,}/|https?://|URL:)", re.I)
 SKIP_TOKEN = re.compile(r"(https?://|www\.|doi[:.]|10\.\d{4,}/|@)", re.IGNORECASE)
 
 
@@ -72,6 +80,14 @@ def is_russian(line):
     return cyr > 0 and cyr >= lat
 
 
+def is_japanese(line):
+    """True when the line has kana and at least as many Japanese characters as Latin and Cyrillic letters."""
+    kana = len(re.findall(r"[\u3040-\u30ff]", line))
+    kanji = len(re.findall(r"[\u4e00-\u9fff]", line))
+    other = len(re.findall(r"[a-zа-яё]", line, re.IGNORECASE))  # Latin and Cyrillic
+    return kana > 0 and kana + kanji >= other
+
+
 def split_references(lines):
     """Index of the reference-list heading, or None."""
     for i, line in enumerate(lines):
@@ -102,6 +118,8 @@ def _is_version(line, start):
     if not before:
         return False
     word = before[-1].strip("(«\"")
+    if word.endswith("§") or word.lower() in SECTION_WORDS:
+        return True
     return word.lower() in VERSION_WORDS or bool(re.fullmatch(r"[A-Z][A-Za-z-]*", word))
 
 
@@ -158,6 +176,12 @@ def lint(lines):
             findings.append(("spacing", i, f"'{m.group()}' — put a (non-breaking) space between number and unit"))
         if '"' in clean:
             findings.append(("quotes", i, "straight quotes — use «…» in Russian text"))
+    # 6. Incomplete reference records
+    for line in refs:
+        m = REF_ENTRY.match(line)
+        if m and re.search(r"\s//\s", line) and not LOCATOR.search(line.split("//", 1)[1]):
+            findings.append(("record", None, f"reference {m.group(1) or m.group(2)}: no pages or article number "
+                                             "and no DOI or URL — complete the record (Gate A)"))
     return findings
 
 
